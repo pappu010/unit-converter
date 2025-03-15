@@ -1,44 +1,36 @@
-from flask import Flask, render_template, request, jsonify
+import os
+from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# Conversion rates for length & weight
-conversion_rates = {
-    "length": {"km": 1000, "m": 1, "cm": 0.01, "mm": 0.001},
-    "weight": {"kg": 1, "g": 0.001, "lb": 0.453592, "oz": 0.0283495}
-}
-
-def convert_units(value, from_unit, to_unit, category):
-    meters = value * conversion_rates[category][from_unit]
-    return meters / conversion_rates[category][to_unit]
-
-@app.route("/")
+@app.route('/')
 def home():
     return render_template("index.html")
 
-@app.route("/convert", methods=["POST"])
+@app.route('/convert', methods=['POST'])
 def convert():
-    data = request.json
-    value = float(data["value"])
-    from_unit = data["fromUnit"]
-    to_unit = data["toUnit"]
-    category = data["category"]
-
-    if category in ["length", "weight"]:
-        result = convert_units(value, from_unit, to_unit, category)
-        return jsonify({"result": round(result, 4)})
-
-    elif category == "temperature":
-        if from_unit == "C" and to_unit == "F":
-            result = (value * 9/5) + 32
-        elif from_unit == "F" and to_unit == "C":
-            result = (value - 32) * 5/9
+    try:
+        value = float(request.form['value'])
+        from_unit = request.form['from_unit']
+        to_unit = request.form['to_unit']
+        
+        # Simple unit conversion logic (Example: Length conversion)
+        conversion_factors = {
+            'meters': 1,
+            'kilometers': 0.001,
+            'centimeters': 100,
+            'inches': 39.3701,
+            'feet': 3.28084
+        }
+        
+        if from_unit in conversion_factors and to_unit in conversion_factors:
+            result = value * (conversion_factors[to_unit] / conversion_factors[from_unit])
+            return f"Converted Value: {result:.2f} {to_unit}"
         else:
-            result = value
-        return jsonify({"result": round(result, 2)})
-
-    return jsonify({"error": "Invalid category"}), 400
+            return "Invalid units selected."
+    except:
+        return "Error: Invalid input. Please enter a valid number."
 
 if __name__ == "__main__":
-    app.run(debug=True)
- 
+    port = int(os.environ.get("PORT", 10000))  # Get the port from environment variables
+    app.run(host="0.0.0.0", port=port)  # Bind to 0.0.0.0 for external access
